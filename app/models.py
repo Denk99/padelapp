@@ -22,9 +22,17 @@ class PlayerUpdate(PlayerBase):
     name: str | None = None
 
     # Match - Player intermediate table
-"""class MatchPlayerLink(SQLModel, table=True):
-    match_id: int | None = Field(default=None, foreign_key="match.id", primary_key=True)
-    player_id: int | None = Field(default=None, foreign_key="player.id", primary_key=True)"""
+class MatchPlayerLink(SQLModel, table=True):
+    match_id: int | None = Field(
+        default=None,
+        foreign_key="match.id",
+        primary_key=True
+    )
+    player_id: int | None = Field(
+        default=None,
+        foreign_key="player.id",
+        primary_key=True
+    )
 
     # Match classes
 class MatchBase(SQLModel):
@@ -33,11 +41,11 @@ class MatchBase(SQLModel):
 
 class Match(MatchBase, table = True):
     id: int | None = Field(default=None, primary_key=True)
-    host: Player | None = Relationship()
+    host: Player | None = Relationship(sa_relationship_kwargs={"foreign_keys": "[Match.host_id]"})
     host_id: int | None = Field(default=None, foreign_key="player.id")
     winner_id: int | None = Field(default=None, foreign_key="player.id")
-    winner: Player | None = Relationship()
-    players: list[Player] = Relationship()
+    winner: Player | None = Relationship(sa_relationship_kwargs={"foreign_keys": "[Match.winner_id]"})
+    players: list[Player] = Relationship(link_model=MatchPlayerLink)
     
 class MatchCreate(MatchBase):
     is_1v1: bool

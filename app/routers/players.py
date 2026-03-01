@@ -9,7 +9,10 @@ router = APIRouter()
     # GET Player
 @router.get("/players/{player_id}", response_model=PlayerPublic)
 def get_player(session: SessionDep, player_id: int):
-    return session.get(Player, player_id)
+    player = session.get(Player, player_id)
+    if not player:
+        raise HTTPException(status_code=404, detail="Player not found")
+    return player
 
     # GET Player list
 @router.get("/players/", response_model=list[PlayerPublic]) 
