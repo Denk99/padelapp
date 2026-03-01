@@ -20,6 +20,7 @@ def get_match_list(session: SessionDep, offset: int = 0, limit: int = Query(defa
     return matches
 
 # POST Methods
+    # POST Match method
 @router.post("/matches/")
 def post_match(match: MatchCreate, session: SessionDep):
     db_match = Match.model_validate(match)
@@ -27,3 +28,26 @@ def post_match(match: MatchCreate, session: SessionDep):
     session.commit()
     session.refresh(db_match)
     return db_match
+
+# UPDATE Methods
+    # UPDATE Match method
+@router.patch("/matches/{match_id}")
+def update_match_settings(match_id: int, match: MatchUpdateSettings, session: SessionDep):
+    match_db = session.get(Match, match_id)
+    if not match_db:
+        raise HTTPException(status_code=404, detail="Hero not found")
+    match_data = match.model_dump(exclude_unset=True)
+    match_db.sqlmodel_update(match_data)
+    session.add(match_db)
+    session.commit()
+    session.refresh(match_db)
+    return match_db
+
+# DELETE Methods
+    # DELETE Match method
+@router.delete("/matches/{match_id}")
+def delete_match(match_id: int, session: SessionDep):
+    db_match = session.get(Match, match_id)
+    session.delete(db_match)
+    session.commit()
+    return {"ok": True}
