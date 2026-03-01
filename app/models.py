@@ -26,10 +26,32 @@ class PlayerUpdate(PlayerBase):
     match_id: int | None = Field(default=None, foreign_key="match.id", primary_key=True)
     player_id: int | None = Field(default=None, foreign_key="player.id", primary_key=True)"""
 
-    # Match class
-"""class Match(SQLModel, table = True):
-    id: int
+    # Match classes
+class MatchBase(SQLModel):
     is_1v1: bool
+    is_private: bool
+
+class Match(MatchBase, table = True):
+    id: int | None = Field(default=None, primary_key=True)
     host: Player | None = Relationship()
-    players: list[Player] = Relationship(link_model=MatchPlayerLink)
-    winner: Player | None = Relationship()"""
+    host_id: int | None = Field(default=None, foreign_key="player.id")
+    winner_id: int | None = Field(default=None, foreign_key="player.id")
+    winner: Player | None = Relationship()
+    players: list[Player] = Relationship()
+    
+class MatchCreate(MatchBase):
+    is_1v1: bool
+    is_private: bool
+    host_id: int | None = None
+
+class MatchPublic(MatchBase):
+    id: int
+    host_id: int | None
+    winner_id: int | None    
+    
+class MatchUpdateSettings(MatchBase):
+    is_1v1: bool | None = None
+    is_private: bool | None = None
+
+class MatchUpdatePlayers(MatchBase):
+    players: list[Player] | None = None
