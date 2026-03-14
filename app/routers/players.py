@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Query
 from sqlmodel import select
 from app.models import Player, PlayerCreate, PlayerUpdate, PlayerPublic
 from app.dependencies import SessionDep
+import app.auth as aa
 
 router = APIRouter()
 
@@ -27,6 +28,13 @@ def get_player_list(session: SessionDep, offset: int = 0, limit: int = Query(def
     #POST Player
 @router.post("/players/")
 def post_player(player: PlayerCreate, session: SessionDep) -> Player:
+    username_taken = session.exec(select(Player).where(Player.username == player.username)).first()
+    email_registered = session.exec(select(Player).where(Player.email == player.email)).first()
+    if username_taken:
+        raise HTTPException(400, detail="Username already taken.")
+    if email_registered:
+        raise HTTPException(400, detail="Email already registered.")
+    player.password = aa.get_pwd_hash(player.password)
     db_player = Player.model_validate(player)
     session.add(db_player)
     session.commit()

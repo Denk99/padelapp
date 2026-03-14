@@ -1,25 +1,47 @@
 from sqlmodel import Field, Session, SQLModel, create_engine, select, Relationship
+from datetime import date
+from pydantic import EmailStr, BaseModel
+from typing import Optional
 
 # Classes
     # Player classes
 class PlayerBase(SQLModel):
-    name: str = Field(index=True)
-    age: int | None = Field(default=None, index=True)
+    username: str  = Field(index=True, unique=True)
+    full_name: str
+    email: str  = Field(index=True, unique=True)
+    birth_date: date | None = None
     is_male: bool
+    city: str
+    is_active: bool = Field(default=True)
 
 class Player(PlayerBase, table = True):
     id: int | None = Field(default=None, primary_key=True)
 
 class PlayerPublic(PlayerBase):
-    id: int  
+    id: int
+    username: str
+    city: str
+    is_male: bool
+    is_active: bool = True
 
 class PlayerCreate(PlayerBase):
-    name: str
-    age: int | None = Field(default=None, index=True) 
-    is_male: bool  
+    username: str
+    full_name: str
+    email: EmailStr
+    birth_date: date | None = Field(default=None)
+    city: str
+    is_male: bool
+    password: str
 
 class PlayerUpdate(PlayerBase):
-    name: str | None = None
+    username: str | None = None
+    full_name: str | None = None
+    surname: str | None = None
+    email: str | None = None
+    birth_date: date | None = None
+    is_male: bool | None = None
+    city: str | None = None
+    is_active: bool | None = None
 
     # Match - Player intermediate table
 class MatchPlayerLink(SQLModel, table=True):
@@ -45,6 +67,8 @@ class Match(MatchBase, table = True):
     host_id: int | None = Field(default=None, foreign_key="player.id")
     winner_id: int | None = Field(default=None, foreign_key="player.id")
     winner: Player | None = Relationship(sa_relationship_kwargs={"foreign_keys": "[Match.winner_id]"})
+    status: str | None = Field(default="Planificado")
+    programmed_date: date | None
     players: list[Player] = Relationship(link_model=MatchPlayerLink)
     
 class MatchCreate(MatchBase):
@@ -63,3 +87,16 @@ class MatchUpdateSettings(MatchBase):
 
 class MatchUpdatePlayers(MatchBase):
     players: list[Player] | None = None
+
+
+    # Pydantic models
+class PlayerLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class TokenData(BaseModel):
+    email: Optional[str] = None

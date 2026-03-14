@@ -9,5 +9,6 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(lifespan=lifespan)
+
 app.include_router(players.router)
 app.include_router(matches.router)
