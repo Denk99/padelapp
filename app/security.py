@@ -1,14 +1,12 @@
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordBearer
 import jwt
 from fastapi import HTTPException, status, Depends
 from passlib.context import CryptContext
-from datetime import date, timedelta, datetime
-from typing import Optional
+from datetime import timedelta, datetime, timezone
+from typing import Optional, Annotated
 from app.models import TokenData, Player
 from app.dependencies import SessionDep
 from sqlmodel import select
-import database
-import time
 
 
 # Security Config
@@ -17,11 +15,10 @@ TOKEN_EXPIRATION_TIME = 30
 SECRET_KEY = "mypass123"
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated ="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 
-
-#AUTH DEPENDENCIES
-def get_current_user(token: str = Depends(oauth2_scheme), session: SessionDep = Depends(database.get_session)):
+# Auth Dependencies
+def get_current_user(session: SessionDep, token: str = Depends(oauth2_scheme)):
     token_data = verify_token(token)
     player = session.exec(select(Player).where(Player.email == token_data.email)).first()
     if player is None:
@@ -30,24 +27,28 @@ def get_current_user(token: str = Depends(oauth2_scheme), session: SessionDep = 
 
 def get_current_active_user(current_user: Player = Depends(get_current_user)):
     if not current_user.is_active:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Inactive user")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Inactive user")
+    return current_user
+
+# Password dependencies
 
 def verify_password(plain_text_pwd: str, hashed_pwd: str) -> bool:
     return pwd_context.verify(plain_text_pwd, hashed_pwd)
 
-def get_pwd_hash(password: str) -> str:
+def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
+
+#Token dependencies
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta]=None):
     to_encode = data.copy()
     if expires_delta:
-        expire = datetime.utcnow()
+        expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
+        expire = datetime.now(timezone.utc) + timedelta(minutes=TOKEN_EXPIRATION_TIME)
     to_encode.update({"exp": expire})
-    enconded_jwt = jwt.encode(to_encode, SECRET_KEY,algorithm=ALGORITHM)
-    return enconded_jwt
-
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY,algorithm=ALGORITHM)
+    return encoded_jwt
 
 def verify_token(token: str) -> TokenData:
     try:
@@ -59,4 +60,6 @@ def verify_token(token: str) -> TokenData:
     except jwt.PyJWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unable to verify credentials.", headers={"WWW-Authenticate": "Bearer"})
 
-
+# Dependencies for simplification
+CurrentPlayer = Annotated[Player, Depends(get_current_user)]
+ActivePlayer = Annotated[Player, Depends(get_current_active_user)]

@@ -12,10 +12,11 @@ class PlayerBase(SQLModel):
     birth_date: date | None = None
     is_male: bool
     city: str
-    is_active: bool = Field(default=True)
 
 class Player(PlayerBase, table = True):
     id: int | None = Field(default=None, primary_key=True)
+    hashed_password: str
+    is_active: bool = Field(default=True)
 
 class PlayerPublic(PlayerBase):
     id: int
