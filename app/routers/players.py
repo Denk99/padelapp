@@ -42,7 +42,7 @@ def verify_player_token(current_player: ActivePlayer):
     }
 
 # POST Methods
-    #POST Player
+    #POST Player (No auth required)
 @router.post("/players/")
 def post_player(player: PlayerCreate, session: SessionDep) -> Player:
     username_taken = session.exec(select(Player).where(Player.username == player.username)).first()

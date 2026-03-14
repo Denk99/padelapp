@@ -9,7 +9,7 @@ from app.dependencies import SessionDep
 from sqlmodel import select
 
 
-# Security Config
+# Security Config 
 ALGORITHM = "HS256"
 TOKEN_EXPIRATION_TIME = 30
 SECRET_KEY = "mypass123"
@@ -31,7 +31,6 @@ def get_current_active_user(current_user: Player = Depends(get_current_user)):
     return current_user
 
 # Password dependencies
-
 def verify_password(plain_text_pwd: str, hashed_pwd: str) -> bool:
     return pwd_context.verify(plain_text_pwd, hashed_pwd)
 
@@ -39,7 +38,6 @@ def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
 #Token dependencies
-
 def create_access_token(data: dict, expires_delta: Optional[timedelta]=None):
     to_encode = data.copy()
     if expires_delta:

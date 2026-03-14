@@ -10,7 +10,7 @@ router = APIRouter()
 
 TOKEN_EXPIRATION_TIME = 30
 
-
+# Login endpoint to obtain a session token
 @router.post("/auth/token", response_model=Token)
 def login_for_access_token(session: SessionDep, form_data: OAuth2PasswordRequestForm = Depends()):
     player = session.exec(select(Player).where(Player.email == form_data.username)).first()

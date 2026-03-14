@@ -89,7 +89,6 @@ class MatchUpdateSettings(MatchBase):
 class MatchUpdatePlayers(MatchBase):
     players: list[Player] | None = None
 
-
     # Pydantic models
 class PlayerLogin(BaseModel):
     email: EmailStr
