@@ -25,11 +25,6 @@ def get_current_user(session: SessionDep, token: str = Depends(oauth2_scheme)):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User does not exist.", headers={"WWW-Authenticate": "Bearer"})
     return player
 
-def get_current_active_user(current_user: Player = Depends(get_current_user)):
-    if not current_user.is_active:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Inactive user")
-    return current_user
-
 # Password dependencies
 def verify_password(plain_text_pwd: str, hashed_pwd: str) -> bool:
     return pwd_context.verify(plain_text_pwd, hashed_pwd)
@@ -60,4 +55,3 @@ def verify_token(token: str) -> TokenData:
 
 # Dependencies for simplification
 CurrentPlayer = Annotated[Player, Depends(get_current_user)]
-ActivePlayer = Annotated[Player, Depends(get_current_active_user)]

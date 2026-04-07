@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Query
 from sqlmodel import select
 from app.models import Player, PlayerCreate, PlayerUpdate, PlayerPublic
 from app.dependencies import SessionDep
-from app.security import ActivePlayer
+from app.security import CurrentPlayer
 import app.security as sec
 
 router = APIRouter()
@@ -10,7 +10,7 @@ router = APIRouter()
 #GET Methods
     # GET Player
 @router.get("/players/{player_id}",response_model=PlayerPublic)
-def get_player(current_player: ActivePlayer, session: SessionDep, player_id: int):
+def get_player(current_player: CurrentPlayer, session: SessionDep, player_id: int):
     player = session.get(Player, player_id)
     if not player:
         raise HTTPException(status_code=404, detail="Player not found")
@@ -18,7 +18,7 @@ def get_player(current_player: ActivePlayer, session: SessionDep, player_id: int
 
     # GET Player list
 @router.get("/players/", response_model=list[PlayerPublic]) 
-def get_player_list(current_player: ActivePlayer, session: SessionDep, offset: int = 0, limit: int = Query(default=100, le=100)) -> list[Player]:
+def get_player_list(current_player: CurrentPlayer, session: SessionDep, offset: int = 0, limit: int = Query(default=100, le=100)) -> list[Player]:
     players = list(session.exec(select(Player).offset(offset).limit(limit)).all())
     if not players:
         raise HTTPException(status_code=404, detail="No players in Database")
@@ -26,11 +26,11 @@ def get_player_list(current_player: ActivePlayer, session: SessionDep, offset: i
 
     #GET Player Profile
 @router.get("/players/profile/")
-def get_player_profile(current_player: ActivePlayer):
+def get_player_profile(current_player: CurrentPlayer):
     return current_player
 
 @router.get("/players/profile/token/")
-def verify_player_token(current_player: ActivePlayer):
+def verify_player_token(current_player: CurrentPlayer):
     return {
         "valid": True,
         "player": {
@@ -69,7 +69,7 @@ def post_player(player: PlayerCreate, session: SessionDep) -> Player:
 # UPDATE methods
      # UPDATE Player
 @router.patch("/players/{player_id}")
-def update_player(current_player: ActivePlayer, player_id: int, player: PlayerUpdate, session: SessionDep):
+def update_player(current_player: CurrentPlayer, player_id: int, player: PlayerUpdate, session: SessionDep):
     player_db = session.get(Player, player_id)
     if not player_db:
         raise HTTPException(status_code=404, detail="Hero not found")
@@ -83,7 +83,7 @@ def update_player(current_player: ActivePlayer, player_id: int, player: PlayerUp
 # DELETE methods
     # DELETE Player
 @router.delete("/players/{player_id}")
-def delete_player(current_player: ActivePlayer, player_id: int, session: SessionDep):
+def delete_player(current_player: CurrentPlayer, player_id: int, session: SessionDep):
     player = session.get(Player, player_id)
     if not player:
         raise HTTPException(status_code=404, detail="Player not found")

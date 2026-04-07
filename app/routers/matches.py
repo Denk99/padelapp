@@ -2,14 +2,14 @@ from fastapi import APIRouter, HTTPException, Query, Depends
 from sqlmodel import select, Session
 from app.models import Match, MatchCreate, MatchPublic, MatchUpdate
 from app.dependencies import get_session
-from app.security import ActivePlayer
+from app.security import CurrentPlayer
 
 router = APIRouter()
 
 # GET Methods
     # GET Match
 @router.get("/matches/{match_id}", response_model=MatchPublic)
-def get_match(match_id: int, current_player: ActivePlayer = Depends(), session: Session = Depends(get_session)):
+def get_match(match_id: int, current_player: CurrentPlayer = Depends(), session: Session = Depends(get_session)):
     match = session.get(Match, match_id)
     if not match:
         raise HTTPException(status_code=404, detail="Match not found")
@@ -20,7 +20,7 @@ def get_match(match_id: int, current_player: ActivePlayer = Depends(), session: 
 def get_match_list(
     offset: int = 0,
     limit: int = Query(default=100, le=100),
-    current_player: ActivePlayer = Depends(),
+    current_player: CurrentPlayer = Depends(),
     session: Session = Depends(get_session),
 ):
     matches = session.exec(select(Match).offset(offset).limit(limit)).all()
@@ -33,7 +33,7 @@ def get_match_list(
 @router.post("/matches/", response_model=MatchPublic)
 def post_match(
     match: MatchCreate,
-    current_player: ActivePlayer = Depends(),
+    current_player: CurrentPlayer = Depends(),
     session: Session = Depends(get_session),
 ):
     db_match = Match.from_orm(match)
@@ -45,7 +45,7 @@ def post_match(
 # PATCH Methods
 
 @router.patch("/matches/{match_id}", response_model=MatchPublic)
-def update_match_settings(match_id: int, match_update: MatchUpdate, current_player: ActivePlayer = Depends(), session: Session = Depends(get_session),):
+def update_match_settings(match_id: int, match_update: MatchUpdate, current_player: CurrentPlayer = Depends(), session: Session = Depends(get_session),):
     db_match = session.get(Match, match_id)
     if not db_match:
         raise HTTPException(status_code=404, detail="Match not found")
@@ -64,7 +64,7 @@ def update_match_settings(match_id: int, match_update: MatchUpdate, current_play
 @router.delete("/matches/{match_id}")
 def delete_match(
     match_id: int,
-    current_player: ActivePlayer = Depends(),
+    current_player: CurrentPlayer = Depends(),
     session: Session = Depends(get_session),
 ):
     db_match = session.get(Match, match_id)
