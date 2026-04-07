@@ -35,9 +35,11 @@ def verify_player_token(current_player: ActivePlayer):
         "valid": True,
         "player": {
             "id": current_player.id,
-            "username": current_player.username,
+            "nombre": current_player.nombre,
             "email": current_player.email,
-            "hashed_password": current_player.hashed_password
+            "rol": current_player.rol,
+            "nivel": current_player.nivel,
+            "ciudad": current_player.ciudad,
         }
     }
 
@@ -45,25 +47,20 @@ def verify_player_token(current_player: ActivePlayer):
     #POST Player (No auth required)
 @router.post("/players/")
 def post_player(player: PlayerCreate, session: SessionDep) -> Player:
-    username_taken = session.exec(select(Player).where(Player.username == player.username)).first()
     email_registered = session.exec(select(Player).where(Player.email == player.email)).first()
-    if username_taken:
-        raise HTTPException(400, detail="Username already taken.")
     if email_registered:
         raise HTTPException(400, detail="Email already registered.")
     
     hashed_password = sec.get_password_hash(player.password)
 
     db_player = Player(
-        username=player.username,
-        full_name=player.full_name,
+        nombre=player.nombre,
         email=player.email,
-        city=player.city,
-        is_male=player.is_male,
-        birth_date=player.birth_date,
-        hashed_password=hashed_password
+        password=hashed_password,
+        nivel=player.nivel,
+        ciudad=player.ciudad,
+        rol=player.rol,
     )
-    #db_player = Player.model_validate(player)
     session.add(db_player)
     session.commit()
     session.refresh(db_player)

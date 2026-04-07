@@ -1,11 +1,16 @@
 from sqlmodel import Session, SQLModel, create_engine
 
 # Database Dev variables
-sql_file = "padelapp.db"
-sql_url = f"sqlite:///{sql_file}"
+DB_USER = "postgres"                # User of Postgre DB access
+DB_PASSWORD = "Jolines019!"         # Password of Postgre DB access
+DB_HOST = "localhost"               # Local server
+DB_PORT = "5432"                    # Default port
+DB_NAME = "test"                    # DB name
 
-connect_args = {"check_same_thread": False}
-engine = create_engine(sql_url, connect_args=connect_args)
+# PostgreSQL URL
+sql_url = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+
+engine = create_engine(sql_url, echo=True)
 
 # DB creation and session
 def create_db_and_tables():

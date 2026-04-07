@@ -1,61 +1,76 @@
-from fastapi import APIRouter, HTTPException, Query
-from sqlmodel import select
-from app.models import Match, MatchCreate, MatchPublic, MatchUpdatePlayers, MatchUpdateSettings
-from app.dependencies import SessionDep
+from fastapi import APIRouter, HTTPException, Query, Depends
+from sqlmodel import select, Session
+from app.models import Match, MatchCreate, MatchPublic, MatchUpdate
+from app.dependencies import get_session
 from app.security import ActivePlayer
 
 router = APIRouter()
 
 # GET Methods
-    # GET Match method
+    # GET Match
 @router.get("/matches/{match_id}", response_model=MatchPublic)
-def get_match(current_player: ActivePlayer, session: SessionDep, match_id: int):
+def get_match(match_id: int, current_player: ActivePlayer = Depends(), session: Session = Depends(get_session)):
     match = session.get(Match, match_id)
-    if match:
-        return match
-    else:
-        raise HTTPException(status_code=404, detail="Unable to find match with mentioned id.")
-    
-    # GET Matches list
+    if not match:
+        raise HTTPException(status_code=404, detail="Match not found")
+    return match
+
+    # GET Match list
 @router.get("/matches/", response_model=list[MatchPublic])
-def get_match_list(current_player: ActivePlayer, session: SessionDep, offset: int = 0, limit: int = Query(default=100, le=100)) -> list[Match]:
-    matches = list(session.exec(select(Match).offset(offset).limit(limit)).all())
+def get_match_list(
+    offset: int = 0,
+    limit: int = Query(default=100, le=100),
+    current_player: ActivePlayer = Depends(),
+    session: Session = Depends(get_session),
+):
+    matches = session.exec(select(Match).offset(offset).limit(limit)).all()
     if not matches:
-        raise HTTPException(status_code=404, detail="No matches in Database")
+        raise HTTPException(status_code=404, detail="No matches in database")
     return matches
 
 # POST Methods
-    # POST Match method
-@router.post("/matches/")
-def post_match(current_player: ActivePlayer, match: MatchCreate, session: SessionDep):
-    db_match = Match.model_validate(match)
+
+@router.post("/matches/", response_model=MatchPublic)
+def post_match(
+    match: MatchCreate,
+    current_player: ActivePlayer = Depends(),
+    session: Session = Depends(get_session),
+):
+    db_match = Match.from_orm(match)
     session.add(db_match)
     session.commit()
     session.refresh(db_match)
     return db_match
 
-# UPDATE Methods
-    # UPDATE Match method
-@router.patch("/matches/{match_id}")
-def update_match_settings(current_player: ActivePlayer, match_id: int, match: MatchUpdateSettings, session: SessionDep):
-    match_db = session.get(Match, match_id)
-    if not match_db:
+# PATCH Methods
+
+@router.patch("/matches/{match_id}", response_model=MatchPublic)
+def update_match_settings(match_id: int, match_update: MatchUpdate, current_player: ActivePlayer = Depends(), session: Session = Depends(get_session),):
+    db_match = session.get(Match, match_id)
+    if not db_match:
         raise HTTPException(status_code=404, detail="Match not found")
-    match_data = match.model_dump(exclude_unset=True)
-    match_db.sqlmodel_update(match_data)
-    session.add(match_db)
+    
+    update_data = match_update.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_match, key, value)
+    
+    session.add(db_match)
     session.commit()
-    session.refresh(match_db)
-    return match_db
+    session.refresh(db_match)
+    return db_match
 
 # DELETE Methods
-    # DELETE Match method
+
 @router.delete("/matches/{match_id}")
-def delete_match(current_player: ActivePlayer, match_id: int, session: SessionDep):
+def delete_match(
+    match_id: int,
+    current_player: ActivePlayer = Depends(),
+    session: Session = Depends(get_session),
+):
     db_match = session.get(Match, match_id)
-    if db_match:
-        session.delete(db_match)
-        session.commit()
-        return {"ok": True}
-    else:
-        raise HTTPException(status_code=404, detail="Unable to find match with mentioned id.")
+    if not db_match:
+        raise HTTPException(status_code=404, detail="Match not found")
+    
+    session.delete(db_match)
+    session.commit()
+    return {"ok": True}
