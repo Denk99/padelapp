@@ -30,6 +30,7 @@ def get_player_list(current_player: CurrentPlayer, session: SessionDep, offset: 
 def get_player_profile(current_player: CurrentPlayer):
     return current_player
 
+    #GET Player token
 @router.get("/players/profile/token/")
 def verify_player_token(current_player: CurrentPlayer):
     return {

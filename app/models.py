@@ -37,7 +37,7 @@ class InscriptionStatus(str, Enum):
 class PlayerBase(SQLModel):
     nombre: str = Field(max_length=100)
     email: EmailStr = Field(max_length=100, unique=True, index=True)
-    nivel: Level | None = None
+    nivel: str | None = None
     ciudad: str | None = None
     rol: str | None = "jugador"
 
@@ -78,13 +78,10 @@ class PlayerUpdate(SQLModel):
 class Inscription(SQLModel, table=True):
     __tablename__ : str = "inscripciones"
     id: int | None = Field(default=None, primary_key=True)
-
     partido_id: int = Field(foreign_key="partidos.id")
     usuario_id: int = Field(foreign_key="usuarios.id")
-
     estado: InscriptionStatus | None = Field(default=InscriptionStatus.confirmado)
     inscrito_en: datetime | None = None
-
     usuario: Optional["Player"] = Relationship()
     partido: Optional["Match"] = Relationship()
 
