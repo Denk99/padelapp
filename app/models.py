@@ -1,10 +1,8 @@
-from __future__ import annotations
 from sqlmodel import Field, SQLModel, Relationship
-from datetime import datetime, date, time
+from datetime import datetime, date, time, timezone
 from pydantic import EmailStr, BaseModel
 from typing import Optional, List
 from enum import Enum
-from sqlalchemy.orm import Mapped
 
 # Classes
 
@@ -31,21 +29,26 @@ class NotificationType(str, Enum):
     partido_completo = "partido completo"
     partido_cancelado = "partido cancelado"
 
+class InscriptionStatus(str, Enum):
+    confirmado = "confirmado"
+    cancelado = "cancelado"
+
     # Player classes
 class PlayerBase(SQLModel):
     nombre: str = Field(max_length=100)
     email: EmailStr = Field(max_length=100, unique=True, index=True)
     nivel: Level | None = None
     ciudad: str | None = None
-    creado_en: datetime | None = None
     rol: str | None = "jugador"
 
 class Player(PlayerBase, table=True):
     __tablename__: str = "usuarios"
     id: int | None = Field(default=None, primary_key=True)
     password: str
-    inscripciones: List["Inscription"] = Relationship(back_populates="usuario")
-    partidos_creados: List["Match"] = Relationship(back_populates="creador")
+    creado_en: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    inscripciones: list["Inscription"] = Relationship(back_populates="usuario")
+    partidos_creados: list["Match"] = Relationship(back_populates="creador")
+    notificaciones: list["Notification"] = Relationship(back_populates="usuario")
 
 class PlayerPublic(SQLModel):
     id: int
@@ -75,18 +78,15 @@ class PlayerUpdate(SQLModel):
 class Inscription(SQLModel, table=True):
     __tablename__ : str = "inscripciones"
     id: int | None = Field(default=None, primary_key=True)
-    partido_id: int | None = Field(
-        default=None,
-        foreign_key="partidos.id"
-    )
-    usuario_id: int | None = Field(
-        default=None,
-        foreign_key="usuarios.id"
-    )
-    estado: MatchStatus | None = MatchStatus.abierto
+
+    partido_id: int = Field(foreign_key="partidos.id")
+    usuario_id: int = Field(foreign_key="usuarios.id")
+
+    estado: InscriptionStatus | None = Field(default=InscriptionStatus.confirmado)
     inscrito_en: datetime | None = None
-    usuario: Mapped[Optional["Player"]] = Relationship(back_populates="inscripciones")
-    partido: Mapped[Optional["Match"]] = Relationship(back_populates="inscripciones")
+
+    usuario: Optional["Player"] = Relationship()
+    partido: Optional["Match"] = Relationship()
 
     # Match classes
 class MatchBase(SQLModel):
@@ -102,10 +102,10 @@ class Match(MatchBase, table=True):
     __tablename__ : str = "partidos"
     id: int | None = Field(default=None, primary_key=True)
     creador_id: int | None = Field(default=None,foreign_key="usuarios.id")
-    creado_en: datetime | None = None
+    creado_en: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     creador: Optional["Player"] = Relationship(back_populates="partidos_creados")
-    jugadores: List["Player"] = Relationship()
-    inscripciones: List["Inscription"] = Relationship(back_populates="partido")
+    jugadores: list["Player"] = Relationship(link_model=Inscription)
+    notificaciones: list["Notification"] = Relationship(back_populates="partido")
     
 class MatchCreate(SQLModel):
     fecha: date
@@ -146,8 +146,8 @@ class Notification(NotificationBase, table=True):
     usuario_id: int | None = Field(default=None, foreign_key="usuarios.id")
     partido_id: int | None = Field(default=None, foreign_key="partidos.id")
 
-    usuario: Mapped[Optional["Player"]] | None = Relationship()
-    partido: Mapped[Optional["Match"]] | None = Relationship()
+    usuario: Optional["Player"] = Relationship()
+    partido: Optional["Match"] = Relationship()
 
 class NotificationCreate(NotificationBase):
     usuario_id: int

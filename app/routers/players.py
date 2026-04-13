@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query
 from sqlmodel import select
+from datetime import timezone, datetime
 from app.models import Player, PlayerCreate, PlayerUpdate, PlayerPublic
 from app.dependencies import SessionDep
 from app.security import CurrentPlayer
@@ -59,11 +60,16 @@ def post_player(player: PlayerCreate, session: SessionDep) -> Player:
         password=hashed_password,
         nivel=player.nivel,
         ciudad=player.ciudad,
-        rol=player.rol,
+        rol=player.rol or "jugador",
+        creado_en= datetime.now(timezone.utc)
     )
-    session.add(db_player)
-    session.commit()
-    session.refresh(db_player)
+    try:
+        session.add(db_player)
+        session.commit()
+        session.refresh(db_player)
+    except:
+         session.rollback()
+         raise HTTPException(status_code=400, detail="Unable to complete transaction.")   
     return db_player
 
 # UPDATE methods
