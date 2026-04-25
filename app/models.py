@@ -131,12 +131,13 @@ class MatchUpdate(SQLModel):
     estado: MatchStatus | None = None
     descripcion: str | None = None
 
+# Notification classes
+
 class NotificationBase(SQLModel):
     tipo: NotificationType
     leida: bool = False
     creado_en: datetime | None = None
 
-# Notification classes
 class Notification(NotificationBase, table=True):
     __tablename__ : str = "notificaciones"
     id: int | None = Field(default=None, primary_key=True)

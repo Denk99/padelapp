@@ -1,9 +1,10 @@
 from fastapi import APIRouter, HTTPException, Query, Depends
 from sqlmodel import select, Session
-from app.models import Match, MatchCreate, MatchPublic, MatchUpdate, MatchStatus, Inscription, InscriptionStatus
+from app.models import Match, MatchCreate, MatchPublic, MatchUpdate, MatchStatus, Inscription, InscriptionStatus, NotificationType
 from app.dependencies import get_session
 from app.security import CurrentPlayer
 from datetime import datetime, timezone
+from app.services import create_notification
 
 router = APIRouter()
 
@@ -33,7 +34,17 @@ def get_available_matches(current_player: CurrentPlayer, offset: int = 0, limit:
         raise HTTPException(status_code=404, detail="No matches available")
     return matches
 
-# PLAYER JOIN Method
+# POST Methods
+
+@router.post("/matches/", response_model=MatchPublic)
+def post_match(match: MatchCreate, current_player: CurrentPlayer, session: Session = Depends(get_session)):
+    db_match = Match.from_orm(match)
+    session.add(db_match)
+    session.commit()
+    session.refresh(db_match)
+    return db_match
+
+    # PLAYER JOIN Method
 @router.post("/matches/{match_id}/inscripciones/", status_code=201)
 def join_match(match_id: int, current_player: CurrentPlayer, session: Session = Depends(get_session)):
     # Check existing match
@@ -43,7 +54,8 @@ def join_match(match_id: int, current_player: CurrentPlayer, session: Session = 
     # Check if Player already present in Match participants
     existing_inscription = session.exec(select(Inscription)
                                         .where(Inscription.partido_id == match_id)
-                                        .where(Inscription.usuario_id == current_player.id)).first()
+                                        .where(Inscription.usuario_id == current_player.id)
+                                        .where(Inscription.estado == InscriptionStatus.confirmado)).first()
     if existing_inscription:
         raise HTTPException(status_code=400, detail="Player already in match")
     # Check if there are available Inscriptions
@@ -68,22 +80,22 @@ def join_match(match_id: int, current_player: CurrentPlayer, session: Session = 
         if plazas_disponibles <= 0:
             match_db.estado = MatchStatus.completo
             session.add(match_db)
+    if plazas_disponibles <= 0:
+        match_db.estado = MatchStatus.completo
+        session.add(match_db)
+    # Notify match owner when inscriptions are complete
+        if match_db.creador_id is not None and match_db.creador_id != current_player.id:
+            create_notification(
+                session=session,
+                usuario_id=match_db.creador_id,
+                tipo=NotificationType.partido_completo,
+                partido_id=match_id
+            )
     session.commit()
     return {"message": "OK", "match_id": match_id, "plazas_restantes": str(plazas_disponibles)}
 
-
-# POST Methods
-
-@router.post("/matches/", response_model=MatchPublic)
-def post_match(match: MatchCreate, current_player: CurrentPlayer, session: Session = Depends(get_session)):
-    db_match = Match.from_orm(match)
-    session.add(db_match)
-    session.commit()
-    session.refresh(db_match)
-    return db_match
-
 # PATCH Methods
-
+    # Update Match
 @router.patch("/matches/{match_id}", response_model=MatchPublic)
 def update_match_settings(match_id: int, match_update: MatchUpdate, current_player: CurrentPlayer, session: Session = Depends(get_session),):
     db_match = session.get(Match, match_id)
@@ -98,6 +110,25 @@ def update_match_settings(match_id: int, match_update: MatchUpdate, current_play
     session.commit()
     session.refresh(db_match)
     return db_match
+
+    # PLAYER Cancel inscription
+@router.patch("/matches/{match_id}/inscripciones/cancel", status_code=200)
+def cancel_inscription(match_id: int, current_player: CurrentPlayer, session: Session = Depends(get_session)):
+    match_db = session.get(Match, match_id)
+    if not match_db:
+        raise HTTPException(status_code=404, detail="Unable to find match")
+    # Check if Player is present in Match
+    match_inscription = session.exec(select(Inscription)
+                                        .where(Inscription.partido_id == match_id)
+                                        .where(Inscription.usuario_id == current_player.id)).first()
+    if not match_inscription:
+        raise HTTPException(status_code=404, detail=f"Player not found in match id: {match_db.id}")
+    else:
+        match_inscription.estado = InscriptionStatus.cancelado
+        session.commit()
+        session.refresh(match_inscription)
+        return {"message": "OK", "status": match_inscription.estado}
+
 
 # DELETE Methods
 
