@@ -94,6 +94,7 @@ def delete_player(current_player: CurrentPlayer, player_id: int, session: Sessio
     player = session.get(Player, player_id)
     if not player:
         raise HTTPException(status_code=404, detail="Player not found")
-    session.delete(player)
-    session.commit()
-    return {"ok": True}
+    if current_player.rol == "administrador":
+        session.delete(player)
+        session.commit()
+        return {"ok": True}

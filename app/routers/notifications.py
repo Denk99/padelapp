@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlmodel import select, Session
-from sqlalchemy import desc, update, false
+from sqlalchemy import desc, update
 from app.models import Notification, NotificationCreate, NotificationRead, NotificationType
 from app.dependencies import get_session
 from app.security import CurrentPlayer

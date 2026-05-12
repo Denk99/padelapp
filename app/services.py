@@ -1,6 +1,6 @@
 from app.models import Notification, NotificationType
 from datetime import datetime, timezone
-from database import Session
+from app.database import Session
 
 def create_notification(
     session: Session,
